@@ -1,0 +1,88 @@
+#created on: 01/02/2012
+package nl.weev.knowledge
+
+#list any import classes here.
+import nl.weev.knowledge.engine.KnowledgeDispatcherSingleton;
+import nl.weev.knowledge.api.FactOut;
+import nl.weev.knowledge.api.EventInfo;
+import nl.weev.knowledge.api.Person;
+
+
+#declare any global variables here
+global java.lang.Boolean isTestRunning;
+
+rule "Send Fact To Queue"
+
+    when
+        $f: FactOut()
+        eval( isTestRunning == false )
+    then    
+        KnowledgeDispatcherSingleton.getInstance().sendFactToQueue($f);
+
+end
+
+rule "Event Name to Upper Case"
+
+    when
+        $e: EventInfo( name != null )
+    then
+        $e.setName($e.getName().toUpperCase());
+
+end
+
+rule "Participants Recommendation for Golf"
+
+    when
+        $e: EventInfo( $name : name, participants.size() <= 3 )
+        eval ( $name.equalsIgnoreCase("golf") )
+    then    	
+        Person p1 = new Person();
+    	p1.setFirstName("Reinder");
+    	$e.getParticipants().add(p1);
+    	Person p2 = new Person();
+    	p2.setFirstName("Matthijs");
+    	$e.getParticipants().add(p2);
+    	Person p3 = new Person();
+    	p3.setFirstName("Willem");
+    	$e.getParticipants().add(p3);
+    	
+end
+
+rule "Determine Event Participants"
+
+    when
+        $e: EventInfo( participants.isEmpty() == false )
+        $p: Person( description == "jay" ) from $e.participants
+    then
+        $p.setFirstName("Juliano");
+
+end
+
+rule "Add default participant" salience -5
+
+    when
+        $e: EventInfo( participants.isEmpty() == true )
+    then
+    	Person person = new Person();
+    	person.setFirstName("Junior");
+    	$e.getParticipants().add(person);
+
+end
+
+rule "Prepare for Feedback" salience -10
+
+    when
+        $e: EventInfo()
+    then
+        insert(new FactOut($e));
+
+end
+
+rule "Finalize Event Business" salience -15
+
+    when
+        $e: EventInfo()
+    then
+        drools.halt();
+
+end
